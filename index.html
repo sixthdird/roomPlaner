@@ -43,6 +43,10 @@
     <button onclick="searchTeam()" style="background:#636e72">Suchen</button>
 </div>
 
+<svg id="f1" class="floor-map" viewBox="0 0 2000 1200"></svg>
+<svg id="f2" class="floor-map active" viewBox="0 0 2000 1200" width="100%">
+    </svg>
+	
 <script>
     // --- KONFIGURATION ---
     const SUPABASE_URL = 'https://lpaviilmkhwwhhlltkcy.supabase.co';
@@ -82,8 +86,8 @@ function renderMaps() {
     // HINTERGRUNDBILDER neu einfügen (bevor die Räume kommen!)
     const imgF2 = document.createElementNS("http://www.w3.org/2000/svg", "image");
     imgF2.setAttribute("href", "f2_2048.png"); // Hier dein Dateiname
-    imgF2.setAttribute("width", "800");
-    imgF2.setAttribute("height", "500");
+    imgF2.setAttribute("width", "2000");
+    imgF2.setAttribute("height", "1200");
     imgF2.setAttribute("x", "0");
     imgF2.setAttribute("y", "0");
     f2.appendChild(imgF2);
