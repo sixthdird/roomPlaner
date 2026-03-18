@@ -96,21 +96,24 @@
         });
     }
 
-    async function handleRoomClick(roomId) {
-        const team = prompt("Welches Team soll in diesen Raum?");
-        if (team === null) return; // Abbrechen gedrückt
+async function handleRoomClick(roomId) {
+    const team = prompt("Welches Team soll in diesen Raum?");
+    if (team === null) return; 
 
-        // In Supabase speichern
-        const { error } = await supabase
-            .from('bookings')
-            .upsert({ room_id: roomId, team_name: team || null });
+    // WICHTIG: Hier muss supabaseClient stehen (wie oben definiert)
+    const { error } = await supabaseClient
+        .from('bookings')
+        .upsert({ room_id: roomId, team_name: team || null });
 
-        if (!error) {
-            const room = allRooms.find(r => r.id === roomId);
-            room.team = team || null;
-            renderMaps();
-        }
+    if (error) {
+        console.error("Fehler beim Speichern:", error);
+        alert("Fehler: RLS in Supabase deaktiviert?");
+    } else {
+        const room = allRooms.find(r => r.id === roomId);
+        room.team = team || null;
+        renderMaps();
     }
+}
 
     function showFloor(floorId) {
         document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
