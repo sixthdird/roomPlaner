@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>RaumPlaner Cloud</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f4f7f6; margin: 0; }
+        header { background: #2d3436; color: white; width: 100%; text-align: center; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        #controls { margin: 20px; display: flex; gap: 10px; align-items: center; background: white; padding: 15px; border-radius: 8px; }
+        .floor-map { width: 800px; height: 500px; background: white; border: 2px solid #2d3436; display: none; }
+        .floor-map.active { display: block; }
+        .raum-shape { fill: #dfe6e9; stroke: #2d3436; stroke-width: 1; cursor: pointer; transition: all 0.2s; }
+        .raum-shape:hover { fill: #b2bec3; }
+        .besetzt { fill: #fab1a0 !important; }
+        .highlight { stroke: #0984e3; stroke-width: 4; fill: #74b9ff !important; }
+        .raum-label { font-size: 10px; pointer-events: none; fill: #2d3436; font-weight: bold; }
+        button { padding: 8px 15px; cursor: pointer; background: #0984e3; color: white; border: none; border-radius: 4px; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📍 Team-Raumplaner Live</h1>
+</header>
+
+<div id="controls">
+    <button onclick="showFloor('f1')">Erdgeschoss</button>
+    <button onclick="showFloor('f2')">1. Stock</button>
+    <input type="text" id="search" placeholder="Team suchen...">
+    <button onclick="searchTeam()" style="background:#636e72">Suchen</button>
+</div>
+
+<svg id="f1" class="floor-map active" viewBox="0 0 800 500"></svg>
+<svg id="f2" class="floor-map" viewBox="0 0 800 500">
+    <image href="f2.png" x="0" y="0" width="800" height="500" opacity="0.5" />
+    </svg>
+
+<script>
+    // --- KONFIGURATION ---
+    const SUPABASE_URL = 'https://lpaviilmkhwwhhlltkcy.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwYXZpaWxta2h3d2hobGx0a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTU3MTEsImV4cCI6MjA4OTMzMTcxMX0.1xPU6HKZkEIrspZeUO8tj1IlVAfWE92JIJF6_KhFxZY';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let allRooms = [];
+
+    // --- INITIALISIERUNG ---
+	async function initApp() {
+    try {
+        // Tabellennamen anpassen, falls sie bei dir anders heißen!
+        const { data: rooms, error: e1 } = await supabaseClient.from('rooms').select('*');
+        const { data: bookings, error: e2 } = await supabaseClient.from('bookings').select('*');
+
+        if (e1 || e2) throw new Error("Fehler beim Laden");
+
+        allRooms = rooms.map(r => {
+            const booking = bookings.find(b => b.room_id === r.id);
+            return { ...r, team: booking ? booking.team_name : null };
+        });
+
+        renderMaps();
+    } catch (err) {
+        console.error("Datenbank-Verbindung fehlgeschlagen:", err);
+    }
+}
+
+    function renderMaps() {
+        // SVGs leeren
+        document.getElementById('f1').innerHTML = '';
+        document.getElementById('f2').innerHTML = '';
+
+        allRooms.forEach(room => {
+            const svg = document.getElementById(room.floor);
+            if (!svg) return;
+
+            // Raum-Rechteck erstellen
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("id", room.id);
+            rect.setAttribute("x", room.x);
+            rect.setAttribute("y", room.y);
+            rect.setAttribute("width", room.width);
+            rect.setAttribute("height", room.height);
+            rect.setAttribute("class", "raum-shape" + (room.team ? " besetzt" : ""));
+            rect.onclick = () => handleRoomClick(room.id);
+            
+            // Beschriftung erstellen
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", room.x + 5);
+            text.setAttribute("y", room.y + 15);
+            text.setAttribute("class", "raum-label");
+            text.textContent = room.team ? `${room.label}: ${room.team}` : room.label;
+
+            svg.appendChild(rect);
+            svg.appendChild(text);
+        });
+    }
+
+    async function handleRoomClick(roomId) {
+        const team = prompt("Welches Team soll in diesen Raum?");
+        if (team === null) return; // Abbrechen gedrückt
+
+        // In Supabase speichern
+        const { error } = await supabase
+            .from('bookings')
+            .upsert({ room_id: roomId, team_name: team || null });
+
+        if (!error) {
+            const room = allRooms.find(r => r.id === roomId);
+            room.team = team || null;
+            renderMaps();
+        }
+    }
+
+    function showFloor(floorId) {
+        document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
+        document.getElementById(floorId).classList.add('active');
+    }
+
+    function searchTeam() {
+        const query = document.getElementById('search').value.toLowerCase();
+        const found = allRooms.find(r => r.team && r.team.toLowerCase().includes(query));
+
+        if (found) {
+            showFloor(found.floor);
+            renderMaps();
+            document.getElementById(found.id).classList.add('highlight');
+        } else {
+            alert("Team nicht gefunden");
+        }
+    }
+
+    initApp();
+</script>
+</body>
+</html>
