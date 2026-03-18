@@ -8,8 +8,19 @@
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f4f7f6; margin: 0; }
         header { background: #2d3436; color: white; width: 100%; text-align: center; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         #controls { margin: 20px; display: flex; gap: 10px; align-items: center; background: white; padding: 15px; border-radius: 8px; }
-        .floor-map { width: 800px; height: 500px; background: white; border: 2px solid #2d3436; display: none; }
-        .floor-map.active { display: block; }
+		.floor-map {
+		    width: 95%;           /* Nutzt fast die volle Breite */
+		    max-width: 1200px;    /* Aber nicht breiter als 1200px (für große Monitore) */
+		    height: auto;         /* Behält das Seitenverhältnis bei */
+		    margin: 20px auto;    /* Erzeugt den Rand und zentriert die Karte */
+		    display: none;
+		    background: #fff;
+		    box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Schicker Schatten für den Rand-Effekt */
+		    border-radius: 8px;
+		}
+		.floor-map.active {
+		    display: block;
+		}
         .raum-shape { fill: #dfe6e9; stroke: #2d3436; stroke-width: 1; cursor: pointer; transition: all 0.2s; }
         .raum-shape:hover { fill: #b2bec3; }
         .besetzt { fill: #fab1a0 !important; }
@@ -96,12 +107,30 @@ function renderMaps() {
             rect.setAttribute("class", "raum-shape" + (room.team ? " besetzt" : ""));
             rect.onclick = () => handleRoomClick(room.id);
             
-            // Beschriftung erstellen
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.setAttribute("x", room.x + 5);
-            text.setAttribute("y", room.y + 15);
-            text.setAttribute("class", "raum-label");
-            text.textContent = room.team ? `${room.label}: ${room.team}` : room.label;
+			// Beschriftung erstellen
+			const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+			text.setAttribute("x", room.x + 5);
+			text.setAttribute("y", room.y + 15);
+			text.setAttribute("class", "raum-label");
+			
+			// Erste Zeile: Raumnummer (P1.1 etc.)
+			const tspanName = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+			tspanName.setAttribute("x", room.x + 5); // Gleiches X für linksbündig
+			tspanName.setAttribute("dy", "0");       // Startposition
+			tspanName.textContent = room.label;
+			tspanName.style.fontWeight = "bold";
+			
+			text.appendChild(tspanName);
+			
+			// Zweite Zeile: Team (falls vorhanden)
+			if (room.team) {
+			    const tspanTeam = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+			    tspanTeam.setAttribute("x", room.x + 5); 
+			    tspanTeam.setAttribute("dy", "1.2em");   // Schiebt den Text eine Zeile tiefer
+			    tspanTeam.textContent = room.team;
+			    tspanTeam.style.fill = "#d63031";        // Teamname in anderer Farbe (z.B. Dunkelrot)
+			    text.appendChild(tspanTeam);
+			}
 
             svg.appendChild(rect);
             svg.appendChild(text);
