@@ -39,13 +39,26 @@
 <div id="controls">
     <button onclick="showFloor('f1')">Erdgeschoss</button>
     <button onclick="showFloor('f2')">1. Stock</button>
+	<button onclick="showFloor('f3')">2. Stock</button>
+	<button onclick="showFloor('f4')">3. Stock</button>
+	<button onclick="showFloor('f5')">4. Stock</button>
+	<button onclick="showFloor('f6')">5. Stock</button>
+	<button onclick="showFloor('f7')">6. Stock</button>
+	<button onclick="showFloor('f8')">7. Stock</button>
+	<button onclick="showFloor('f9')">8. Stock</button>
     <input type="text" id="search" placeholder="Team suchen...">
     <button onclick="searchTeam()" style="background:#636e72">Suchen</button>
 </div>
 
-<svg id="f1" class="floor-map" viewBox="0 0 2000 1200"></svg>
-<svg id="f2" class="floor-map active" viewBox="0 0 2000 1200" width="100%">
-    </svg>
+<svg id="f1" class="floor-map active" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f2" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f3" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f4" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f5" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f6" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f7" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f8" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
+<svg id="f9" class="floor-map" viewBox="0 0 2000 1200" width="100%"></svg>
 	
 <script>
     // --- KONFIGURATION ---
@@ -76,21 +89,98 @@
 }
 
 function renderMaps() {
-    const f1 = document.getElementById('f1');
-    const f2 = document.getElementById('f2');
+const f1 = document.getElementById('f1');
+const f2 = document.getElementById('f2');
+const f3 = document.getElementById('f3');
+const f4 = document.getElementById('f4');
+const f5 = document.getElementById('f5');
+const f6 = document.getElementById('f6');
+const f7 = document.getElementById('f7');
+const f8 = document.getElementById('f8');
+const f9 = document.getElementById('f9');
 
     // SVGs leeren
     f1.innerHTML = '';
     f2.innerHTML = '';
+    f3.innerHTML = '';
+    f4.innerHTML = '';
+    f5.innerHTML = '';
+    f6.innerHTML = '';
+    f7.innerHTML = '';
+    f8.innerHTML = '';
+    f9.innerHTML = '';
 
-    // HINTERGRUNDBILDER neu einfügen (bevor die Räume kommen!)
-    const imgF2 = document.createElementNS("http://www.w3.org/2000/svg", "image");
-    imgF2.setAttribute("href", "f2_2048.png"); // Hier dein Dateiname
-    imgF2.setAttribute("width", "2000");
-    imgF2.setAttribute("height", "1200");
-    imgF2.setAttribute("x", "0");
-    imgF2.setAttribute("y", "0");
-    f2.appendChild(imgF2);
+    const imgF1 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF1.setAttribute("href", "4.0_2048.png"); // Hier dein Dateiname
+imgF1.setAttribute("width", "2000");
+imgF1.setAttribute("height", "1200");
+imgF1.setAttribute("x", "0");
+imgF1.setAttribute("y", "0");
+f1.appendChild(imgF1);
+
+const imgF2 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF2.setAttribute("href", "4.1_2048.png"); // Hier dein Dateiname
+imgF2.setAttribute("width", "2000");
+imgF2.setAttribute("height", "1200");
+imgF2.setAttribute("x", "0");
+imgF2.setAttribute("y", "0");
+f2.appendChild(imgF2);
+
+const imgF3 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF3.setAttribute("href", "4.2_2048.png"); // Hier dein Dateiname
+imgF3.setAttribute("width", "2000");
+imgF3.setAttribute("height", "1200");
+imgF3.setAttribute("x", "0");
+imgF3.setAttribute("y", "0");
+f3.appendChild(imgF3);
+
+const imgF4 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF4.setAttribute("href", "4.3_2048.png"); // Hier dein Dateiname
+imgF4.setAttribute("width", "2000");
+imgF4.setAttribute("height", "1200");
+imgF4.setAttribute("x", "0");
+imgF4.setAttribute("y", "0");
+f4.appendChild(imgF4);
+
+const imgF5 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF5.setAttribute("href", "4.4_2048.png"); // Hier dein Dateiname
+imgF5.setAttribute("width", "2000");
+imgF5.setAttribute("height", "1200");
+imgF5.setAttribute("x", "0");
+imgF5.setAttribute("y", "0");
+f5.appendChild(imgF5);
+
+const imgF6 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF6.setAttribute("href", "4.5_2048.png"); // Hier dein Dateiname
+imgF6.setAttribute("width", "2000");
+imgF6.setAttribute("height", "1200");
+imgF6.setAttribute("x", "0");
+imgF6.setAttribute("y", "0");
+f6.appendChild(imgF6);
+
+const imgF7 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF7.setAttribute("href", "4.6_2048.png"); // Hier dein Dateiname
+imgF7.setAttribute("width", "2000");
+imgF7.setAttribute("height", "1200");
+imgF7.setAttribute("x", "0");
+imgF7.setAttribute("y", "0");
+f7.appendChild(imgF7);
+
+const imgF8 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF8.setAttribute("href", "4.7_2048.png"); // Hier dein Dateiname
+imgF8.setAttribute("width", "2000");
+imgF8.setAttribute("height", "1200");
+imgF8.setAttribute("x", "0");
+imgF8.setAttribute("y", "0");
+f8.appendChild(imgF8);
+
+const imgF9 = document.createElementNS("http://www.w3.org/2000/svg", "image");
+imgF9.setAttribute("href", "4.8_2048.png"); // Hier dein Dateiname
+imgF9.setAttribute("width", "2000");
+imgF9.setAttribute("height", "1200");
+imgF9.setAttribute("x", "0");
+imgF9.setAttribute("y", "0");
+f9.appendChild(imgF9);
 
         allRooms.forEach(room => {
             const svg = document.getElementById(room.floor);
