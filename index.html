@@ -91,98 +91,101 @@
         }
     }
 
-    function renderMaps() {
-        // Alle Stockwerke durchlaufen
-        for (let i = 1; i <= 9; i++) {
-            const svg = document.getElementById(`f${i}`);
-            if (!svg) continue;
-            svg.innerHTML = '';
-
-            // Hintergrundbild
-            const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-            img.setAttribute("href", `4.${i-1}_2048.png`);
-            img.setAttribute("width", "2000");
-            img.setAttribute("height", "1200");
-            svg.appendChild(img);
-
-            // Räume für dieses Stockwerk filtern
-            const floorRooms = allRooms.filter(r => r.floor === `f${i}`);
-            floorRooms.forEach(room => {
-                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                rect.setAttribute("id", room.id);
-                rect.setAttribute("x", room.x);
-                rect.setAttribute("y", room.y);
-                rect.setAttribute("width", room.width);
-                rect.setAttribute("height", room.height);
-                rect.setAttribute("class", "raum-shape" + (room.team ? " besetzt" : ""));
-                rect.onclick = () => handleRoomClick(room.id);
-                svg.appendChild(rect);
-
-                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                text.setAttribute("x", room.x + room.width / 2);
-                text.setAttribute("y", room.y + room.height / 2);
-                text.setAttribute("text-anchor", "middle");
-                text.setAttribute("class", "raum-label");
-
-                // Logik für Textanzeige
-                if (room.team) {
-                    // Falls Teamzone (_N oder _S) -> Nur Teamname anzeigen
-                    if (room.id.includes('_N') || room.id.includes('_S')) {
-                        text.textContent = room.team;
-                        text.style.fontSize = "16px";
-                    } else {
-                        // Meetingraum -> Beides anzeigen
-                        const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                        t1.setAttribute("x", room.x + room.width / 2);
-                        t1.setAttribute("dy", "-0.2em");
-                        t1.textContent = room.label;
-                        
-                        const t2 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                        t2.setAttribute("x", room.x + room.width / 2);
-                        t2.setAttribute("dy", "1.4em");
-                        t2.textContent = room.team;
-                        t2.style.fill = "#d63031";
-                        text.appendChild(t1);
-                        text.appendChild(t2);
-                    }
-                } else {
-                    text.textContent = room.label;
-                }
-                svg.appendChild(text);
-            });
-        }
-    }
-
-    async function handleRoomClick(roomId) {
-        const room = allRooms.find(r => r.id === roomId);
+        function renderMaps() {
+            for (let i = 1; i <= 9; i++) {
+                const svg = document.getElementById(`f${i}`);
+                if (!svg) continue;
+                svg.innerHTML = '';
         
-        // Erstmal prüfen: Ist in der DB aktuell schon jemand? (Gleichzeitiges Buchen Schutz)
-        const { data: current } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).single();
-        const currentTeam = current ? current.team_name : null;
-
-        let newTeam = "";
-
-        if (currentTeam) {
-            const action = confirm(`Raum ${room.label} ist von "${currentTeam}" besetzt.\n\nLÖSCHEN (OK) oder ÄNDERN (Abbrechen)?`);
-            if (action) {
-                newTeam = null; 
-            } else {
-                newTeam = prompt("Neuer Teamname:", currentTeam);
-                if (newTeam === null) return;
+                const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+                img.setAttribute("href", `4.${i-1}_2048.png`);
+                img.setAttribute("width", "2000");
+                img.setAttribute("height", "1200");
+                svg.appendChild(img);
+        
+                allRooms.filter(r => r.floor === `f${i}`).forEach(room => {
+                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    rect.setAttribute("id", room.id);
+                    rect.setAttribute("x", room.x);
+                    rect.setAttribute("y", room.y);
+                    rect.setAttribute("width", room.width);
+                    rect.setAttribute("height", room.height);
+                    rect.setAttribute("class", "raum-shape" + (room.team ? " besetzt" : ""));
+                    rect.onclick = () => handleRoomClick(room.id);
+                    svg.appendChild(rect);
+        
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", room.x + room.width / 2);
+                    text.setAttribute("y", room.y + room.height / 2);
+                    text.setAttribute("text-anchor", "middle");
+                    text.setAttribute("dominant-baseline", "central"); // Vertikale Zentrierung
+                    text.setAttribute("class", "raum-label");
+        
+                    if (room.team) {
+                        // TEAMNAME ANZEIGEN (Maximale Größe berechnen)
+                        const labelText = room.team;
+                        text.textContent = labelText;
+                        
+                        // Dynamische Schriftgröße berechnen
+                        // Ein Buchstabe ist ca. 0.6 mal so breit wie hoch
+                        const padding = 10;
+                        const maxW = room.width - padding;
+                        const maxH = room.height - padding;
+                        
+                        // Schätzung: fontSize = min(Höhe der Box, Breite der Box / (Anzahl Zeichen * Faktor))
+                        const fontSizeBasedOnWidth = maxW / (labelText.length * 0.6);
+                        const finalSize = Math.min(maxH * 0.8, fontSizeBasedOnWidth);
+                        
+                        text.setAttribute("font-size", finalSize + "px");
+                        text.style.fill = "#2d3436"; // Nicht mehr rot, sondern edles Dunkelgrau
+                    } else {
+                        // LEERER RAUM -> Englische Bezeichnung
+                        const typeLabel = (room.id.includes('_N') || room.id.includes('_S')) ? "Workstation" : room.label;
+                        text.textContent = typeLabel;
+                        text.setAttribute("font-size", "12px");
+                        text.style.opacity = "0.5";
+                    }
+                    svg.appendChild(text);
+                });
             }
-        } else {
-            newTeam = prompt("Welches Team checkt hier ein?");
-            if (newTeam === null || newTeam === "") return;
         }
-
-        const { error } = await supabaseClient.from('bookings').upsert({ room_id: roomId, team_name: newTeam });
-
-        if (error) {
-            alert("Fehler beim Speichern. Prüfe RLS Policies.");
-        } else {
-            initApp(); // Neu laden (Realtime macht das eigentlich, aber sicher ist sicher)
+        
+        async function handleRoomClick(roomId) {
+            // 1. Frische Daten ziehen, um Überschreiben zu verhindern
+            const { data: current } = await supabaseClient.from('bookings')
+                .select('team_name')
+                .eq('room_id', roomId)
+                .maybeSingle();
+        
+            const dbTeam = current ? current.team_name : null;
+            let newTeam = "";
+        
+            if (dbTeam) {
+                const action = confirm(`Room is occupied by "${dbTeam}".\n\nOK: Delete booking\nCancel: Edit name`);
+                if (action) {
+                    newTeam = null;
+                } else {
+                    newTeam = prompt("Edit team name:", dbTeam);
+                    if (newTeam === null) return;
+                }
+            } else {
+                newTeam = prompt("Enter team name for this area:");
+                if (!newTeam) return;
+            }
+        
+            // 2. Datenbank-Update
+            const { error } = await supabaseClient.from('bookings').upsert({ 
+                room_id: roomId, 
+                team_name: newTeam 
+            }, { onConflict: 'room_id' });
+        
+            if (error) {
+                alert("Error: Check Supabase RLS policies.");
+            } else {
+                // Wir laden die App neu, falls Realtime mal hakt
+                initApp();
+            }
         }
-    }
 
     function showFloor(floorId) {
         document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
@@ -218,10 +221,13 @@
     }
 
     // REALTIME SUBSCRIPTION
-    supabaseClient
-        .channel('any')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => initApp())
-        .subscribe();
+supabaseClient
+    .channel('room-updates')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+        console.log('Change received!', payload);
+        initApp(); // Das hier aktualisiert allRooms und rendert neu
+    })
+    .subscribe();
 
     initApp();
 </script>
