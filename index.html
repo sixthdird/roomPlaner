@@ -30,7 +30,8 @@
 
         .raum-label { 
             /* Monospace ist zwingend für die mathematische Berechnung */
-            font-family: 'Courier New', Courier, monospace; 
+            //font-family: 'Courier New', Courier, monospace; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-weight: 900; 
             pointer-events: none; 
             fill: #2d3436; 
@@ -67,6 +68,7 @@
 <svg id="f7" class="floor-map" viewBox="0 0 2000 1200"></svg>
 <svg id="f8" class="floor-map" viewBox="0 0 2000 1200"></svg>
 <svg id="f9" class="floor-map" viewBox="0 0 2000 1200"></svg>
+<svg id="f10" class="floor-map" viewBox="0 0 2000 1200"></svg>
 
 <script>
 // --- KONFIGURATION ---
@@ -100,10 +102,15 @@ function renderFloorButtons() {
     const container = document.getElementById('floor-buttons');
     if (container.innerHTML !== "") return; // Nur einmal bauen
 
-    for (let i = 1; i <= 9; i++) {
+    for (let i = 1; i <= 10; i++) {
         const btn = document.createElement('button');
         btn.className = 'floor-btn' + (i === 1 ? ' active' : '');
-        const label = isGerman ? (i === 1 ? "EG" : `${i-1}. Stock`) : (i === 1 ? "GF" : `${i-1}. Floor`);
+    const label = (i === 10) 
+        ? "Building B" 
+        : (isGerman 
+            ? (i === 1 ? "EG" : `${i-1}. Stock`) 
+            : (i === 1 ? "GF" : `${i-1}. Floor`)
+          );
         btn.innerText = label;
         btn.onclick = () => showFloor(`f${i}`);
         container.appendChild(btn);
@@ -117,7 +124,12 @@ function renderMaps() {
         svg.innerHTML = '';
 
         const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-        img.setAttribute("href", `4.${i-1}_2048.png`);
+        // Logik für den Bildnamen
+        if (i === 10) {
+            img.setAttribute("href", "5.8_2048.png");
+        } else {
+            img.setAttribute("href", `4.${i-1}_2048.png`);
+        }
         img.setAttribute("width", "2000");
         img.setAttribute("height", "1200");
         svg.appendChild(img);
