@@ -44,18 +44,9 @@
 </header>
 
 <div id="controls">
-    <button class="floor-btn active" onclick="showFloor('f1')">EG</button>
-    <button class="floor-btn" onclick="showFloor('f2')">1. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f3')">2. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f4')">3. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f5')">4. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f6')">5. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f7')">6. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f8')">7. Stock</button>
-    <button class="floor-btn" onclick="showFloor('f9')">8. Stock</button>
-    |
-    <input type="text" id="search" placeholder="Team suchen..." onkeypress="if(event.key==='Enter') searchTeam()">
-    <button onclick="searchTeam()" style="background:#636e72">Suchen</button>
+    <div id="floor-buttons"></div> |
+    <input type="text" id="search" placeholder="Search team..." onkeypress="if(event.key==='Enter') searchTeam()">
+    <button onclick="searchTeam()" style="background:#636e72">Search</button>
 </div>
 
 <svg id="f1" class="floor-map active" viewBox="0 0 2000 1200"></svg>
@@ -70,11 +61,13 @@
 
 <script>
 // --- KONFIGURATION ---
+// --- KONFIGURATION ---
 const SUPABASE_URL = 'https://lpaviilmkhwwhhlltkcy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwYXZpaWxta2h3d2hobGx0a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTU3MTEsImV4cCI6MjA4OTMzMTcxMX0.1xPU6HKZkEIrspZeUO8tj1IlVAfWE92JIJF6_KhFxZY';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let allRooms = [];
+const isGerman = navigator.language.startsWith('de');
 
 // --- INITIALISIERUNG ---
 async function initApp() {
@@ -87,9 +80,24 @@ async function initApp() {
             return { ...r, team: (b && b.team_name) ? b.team_name : null };
         });
 
+        renderFloorButtons();
         renderMaps();
     } catch (err) {
         console.error("Setup failed:", err);
+    }
+}
+
+function renderFloorButtons() {
+    const container = document.getElementById('floor-buttons');
+    if (container.innerHTML !== "") return; // Nur einmal bauen
+
+    for (let i = 1; i <= 9; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'floor-btn' + (i === 1 ? ' active' : '');
+        const label = isGerman ? (i === 1 ? "EG" : `${i-1}. Stock`) : (i === 1 ? "GF" : `${i-1}. Floor`);
+        btn.innerText = label;
+        btn.onclick = () => showFloor(`f${i}`);
+        container.appendChild(btn);
     }
 }
 
@@ -120,31 +128,25 @@ function renderMaps() {
             text.setAttribute("x", room.x + room.width / 2);
             text.setAttribute("y", room.y + room.height / 2);
             text.setAttribute("text-anchor", "middle");
-            text.setAttribute("dominant-baseline", "central"); // Vertikale Zentrierung
+            text.setAttribute("dominant-baseline", "central");
             text.setAttribute("class", "raum-label");
 
             if (room.team) {
-                // NUR TEAMNAME ANZEIGEN (Füllt Kasten aus)
                 text.textContent = room.team;
-                
-                // Dynamische Schriftgröße berechnen
-                const padding = 10;
+                const padding = 6;
                 const maxW = room.width - padding;
                 const maxH = room.height - padding;
                 
-                // Faktor 0.6 für durchschnittliche Buchstabenbreite
-                const fontSizeBasedOnWidth = maxW / (room.team.length * 0.6);
-                const finalSize = Math.min(maxH * 0.8, fontSizeBasedOnWidth);
+                // Aggressivere Berechnung für maximale Füllung
+                // Wir nutzen einen Faktor von 0.55 für die Breite
+                const fontSize = Math.min(maxH * 0.9, maxW / (room.team.length * 0.55));
                 
-                text.setAttribute("font-size", finalSize + "px");
-                text.style.fill = "#2d3436";
+                text.setAttribute("font-size", fontSize + "px");
             } else {
-                // LEER -> ENGLISCHE INFO
-                const labelText = (room.id.includes('_N') || room.id.includes('_S')) ? "Workstation" : room.label;
+                const labelText = (room.id.includes('_N') || room.id.includes('_S')) ? (isGerman ? "Arbeitsplatz" : "Workstation") : room.label;
                 text.textContent = labelText;
-                text.setAttribute("font-size", "12px");
+                text.setAttribute("font-size", "11px");
                 text.style.opacity = "0.4";
-                text.style.fill = "#636e72";
             }
             svg.appendChild(text);
         });
@@ -152,71 +154,85 @@ function renderMaps() {
 }
 
 async function handleRoomClick(roomId) {
-    // 1. Live-Check gegen Überschreiben
-    const { data: current } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
-    const dbTeam = current ? current.team_name : null;
+    const room = allRooms.find(r => r.id === roomId);
+    
+    // 1. LIVE-CHECK: Was steht JETZT in der Datenbank?
+    const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
+    const currentDBTeam = latest ? latest.team_name : null;
 
     let newTeam = "";
-    if (dbTeam) {
-        const action = confirm(`Occupied by: "${dbTeam}"\n\nOK: Delete booking\nCancel: Edit name`);
-        if (action) { newTeam = null; } 
-        else {
-            newTeam = prompt("New team name:", dbTeam);
+    if (currentDBTeam) {
+        const msg = isGerman ? `Besetzt von: "${currentDBTeam}"\n\nOK: Löschen\nAbbrechen: Ändern` : `Occupied by: "${currentDBTeam}"\n\nOK: Delete\nCancel: Edit`;
+        const action = confirm(msg);
+        if (action) {
+            newTeam = null;
+        } else {
+            newTeam = prompt(isGerman ? "Neuer Name:" : "New name:", currentDBTeam);
             if (newTeam === null) return;
         }
     } else {
-        newTeam = prompt("Enter team name for this area:");
+        newTeam = prompt(isGerman ? "Teamname eingeben:" : "Enter team name:");
         if (!newTeam) return;
     }
 
-    // 2. Datenbank Update
-    const { error } = await supabaseClient.from('bookings').upsert({ 
-        room_id: roomId, 
-        team_name: newTeam 
-    });
-
-    if (error) {
-        alert("Error saving data. Check RLS policies.");
+    // 2. Erneuter Check vor dem finalen Schreiben
+    const { data: finalCheck } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
+    if ((finalCheck ? finalCheck.team_name : null) !== currentDBTeam) {
+        alert(isGerman ? "Hoppla! In der Zwischenzeit hat jemand anderes diesen Raum geändert." : "Wait! Someone else changed this room while you were typing.");
+        initApp();
+        return;
     }
-    // initApp() wird durch Realtime automatisch getriggert!
+
+    const { error } = await supabaseClient.from('bookings').upsert({ room_id: roomId, team_name: newTeam });
+    if (error) alert("Error: " + error.message);
 }
 
 function showFloor(floorId) {
     document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
     
-    document.getElementById(floorId).classList.add('active');
-    const btn = Array.from(document.querySelectorAll('.floor-btn')).find(b => b.getAttribute('onclick').includes(floorId));
-    if(btn) btn.classList.add('active');
+    const target = document.getElementById(floorId);
+    if(target) target.classList.add('active');
+    
+    // Button-Highlighting über den Index (f1 -> 1. Button)
+    const index = parseInt(floorId.replace('f', '')) - 1;
+    const btns = document.querySelectorAll('.floor-btn');
+    if(btns[index]) btns[index].classList.add('active');
 }
 
 function searchTeam() {
     const query = document.getElementById('search').value.toLowerCase();
     if(!query) return;
 
-    const found = allRooms.find(r => r.team && r.team.toLowerCase().includes(query));
-    if (found) {
-        showFloor(found.floor);
-        setTimeout(() => {
-            const el = document.getElementById(found.id);
+    // Finde ALLE Räume
+    const foundRooms = allRooms.filter(r => r.team && r.team.toLowerCase().includes(query));
+
+    if (foundRooms.length > 0) {
+        // Zum Stockwerk des ersten Treffers springen
+        showFloor(foundRooms[0].floor);
+
+        foundRooms.forEach(room => {
+            const el = document.getElementById(room.id);
             if(el) {
                 el.classList.add('highlight');
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                setTimeout(() => el.classList.remove('highlight'), 3000);
+                // Highlight für 8 Sekunden halten
+                setTimeout(() => el.classList.remove('highlight'), 8000);
             }
-        }, 250);
+        });
+        
+        // Sanft zum ersten Treffer scrollen
+        const firstEl = document.getElementById(foundRooms[0].id);
+        if(firstEl) firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
     } else {
-        alert("Team not found");
+        alert(isGerman ? "Team nicht gefunden" : "Team not found");
     }
 }
 
-// REALTIME SUBSCRIPTION
+// REALTIME
 supabaseClient
     .channel('room-updates')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-        console.log('Update received!', payload);
-        initApp(); // Lädt alles neu und rendert die Karten
-    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => initApp())
     .subscribe();
 
 initApp();
