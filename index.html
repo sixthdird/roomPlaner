@@ -253,6 +253,20 @@ supabaseClient
     .subscribe();
 
 initApp();
+
+    // Hilfsfunktion: Klick-Koordinaten im 2000x1200 System finden
+document.querySelectorAll('.floor-map').forEach(svg => {
+    svg.addEventListener('click', function(e) {
+        const pt = this.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const cursorpt = pt.matrixTransform(this.getScreenCTM().inverse());
+        
+        console.log(`Neue Position für Datenbank: x: ${Math.round(cursorpt.x)}, y: ${Math.round(cursorpt.y)}`);
+        // Optional: Zeigt es auch als Alert an
+        // alert(`x: ${Math.round(cursorpt.x)}, y: ${Math.round(cursorpt.y)}`);
+    });
+});
 </script>
 </body>
 </html>
