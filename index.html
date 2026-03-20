@@ -130,20 +130,37 @@ function renderMaps() {
             text.setAttribute("text-anchor", "middle");
             text.setAttribute("dominant-baseline", "central");
             text.setAttribute("class", "raum-label");
-
+            
             if (room.team) {
-                text.textContent = room.team;
-                const padding = 6;
-                const maxW = room.width - padding;
-                const maxH = room.height - padding;
+                const labelText = room.team;
+                text.textContent = labelText;
+            
+                // --- MATHEMATISCHE SKALIERUNG ---
+                const padding = 8; // Kleiner Puffer zum Rand
+                const availableW = room.width - padding;
+                const availableH = room.height - padding;
                 
-                // Aggressivere Berechnung für maximale Füllung
-                // Wir nutzen einen Faktor von 0.55 für die Breite
-                const fontSize = Math.min(maxH * 0.9, maxW / (room.team.length * 0.55));
+                // Ein durchschnittlicher Buchstabe (Caps) ist ca. 0.6x so breit wie hoch.
+                // Bei 15 Zeichen wäre die Breite: 15 * (FontSize * 0.6)
+                // Umgestellt nach FontSize: FontSize = Width / (15 * 0.6)
+                const charCount = labelText.length;
+                const fontSizeWidth = availableW / (charCount * 0.6);
+                const fontSizeHeight = availableH; // Maximale Höhe ist die Box-Höhe
+            
+                // Wir nehmen den kleineren Wert, damit es in beide Richtungen passt
+                let finalSize = Math.min(fontSizeWidth, fontSizeHeight);
                 
-                text.setAttribute("font-size", fontSize + "px");
+                // Optische Korrektur: Bei extrem wenigen Zeichen (z.B. 2-3) 
+                // begrenzen wir es auf 90% der Boxhöhe, damit es nicht "erdrückend" wirkt
+                if (charCount < 4) finalSize = finalSize * 0.9;
+            
+                text.setAttribute("font-size", finalSize + "px");
+                text.style.fill = "#2d3436";
             } else {
-                const labelText = (room.id.includes('_N') || room.id.includes('_S')) ? (isGerman ? "Arbeitsplatz" : "Workstation") : room.label;
+                // Leere Räume bleiben dezent
+                const labelText = (room.id.includes('_N') || room.id.includes('_S')) 
+                                  ? (isGerman ? "Arbeitsplatz" : "Workstation") 
+                                  : room.label;
                 text.textContent = labelText;
                 text.setAttribute("font-size", "11px");
                 text.style.opacity = "0.4";
