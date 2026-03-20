@@ -69,167 +69,157 @@
 <svg id="f9" class="floor-map" viewBox="0 0 2000 1200"></svg>
 
 <script>
-    const SUPABASE_URL = 'https://lpaviilmkhwwhhlltkcy.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwYXZpaWxta2h3d2hobGx0a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTU3MTEsImV4cCI6MjA4OTMzMTcxMX0.1xPU6HKZkEIrspZeUO8tj1IlVAfWE92JIJF6_KhFxZY';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// --- KONFIGURATION ---
+const SUPABASE_URL = 'https://lpaviilmkhwwhhlltkcy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwYXZpaWxta2h3d2hobGx0a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTU3MTEsImV4cCI6MjA4OTMzMTcxMX0.1xPU6HKZkEIrspZeUO8tj1IlVAfWE92JIJF6_KhFxZY';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let allRooms = [];
+let allRooms = [];
 
-    async function initApp() {
-        try {
-            const { data: rooms } = await supabaseClient.from('rooms').select('*');
-            const { data: bookings } = await supabaseClient.from('bookings').select('*');
+// --- INITIALISIERUNG ---
+async function initApp() {
+    try {
+        const { data: rooms } = await supabaseClient.from('rooms').select('*');
+        const { data: bookings } = await supabaseClient.from('bookings').select('*');
 
-            allRooms = rooms.map(r => {
-                const b = bookings.find(book => book.room_id === r.id);
-                return { ...r, team: (b && b.team_name) ? b.team_name : null };
-            });
+        allRooms = rooms.map(r => {
+            const b = bookings.find(book => book.room_id === r.id);
+            return { ...r, team: (b && b.team_name) ? b.team_name : null };
+        });
 
-            renderMaps();
-        } catch (err) {
-            console.error("Setup fehlgeschlagen:", err);
-        }
+        renderMaps();
+    } catch (err) {
+        console.error("Setup failed:", err);
     }
+}
 
-        function renderMaps() {
-            for (let i = 1; i <= 9; i++) {
-                const svg = document.getElementById(`f${i}`);
-                if (!svg) continue;
-                svg.innerHTML = '';
-        
-                const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-                img.setAttribute("href", `4.${i-1}_2048.png`);
-                img.setAttribute("width", "2000");
-                img.setAttribute("height", "1200");
-                svg.appendChild(img);
-        
-                allRooms.filter(r => r.floor === `f${i}`).forEach(room => {
-                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    rect.setAttribute("id", room.id);
-                    rect.setAttribute("x", room.x);
-                    rect.setAttribute("y", room.y);
-                    rect.setAttribute("width", room.width);
-                    rect.setAttribute("height", room.height);
-                    rect.setAttribute("class", "raum-shape" + (room.team ? " besetzt" : ""));
-                    rect.onclick = () => handleRoomClick(room.id);
-                    svg.appendChild(rect);
-        
-                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    text.setAttribute("x", room.x + room.width / 2);
-                    text.setAttribute("y", room.y + room.height / 2);
-                    text.setAttribute("text-anchor", "middle");
-                    text.setAttribute("dominant-baseline", "central"); // Vertikale Zentrierung
-                    text.setAttribute("class", "raum-label");
-        
-                    if (room.team) {
-                        // TEAMNAME ANZEIGEN (Maximale Größe berechnen)
-                        const labelText = room.team;
-                        text.textContent = labelText;
-                        
-                        // Dynamische Schriftgröße berechnen
-                        // Ein Buchstabe ist ca. 0.6 mal so breit wie hoch
-                        const padding = 10;
-                        const maxW = room.width - padding;
-                        const maxH = room.height - padding;
-                        
-                        // Schätzung: fontSize = min(Höhe der Box, Breite der Box / (Anzahl Zeichen * Faktor))
-                        const fontSizeBasedOnWidth = maxW / (labelText.length * 0.6);
-                        const finalSize = Math.min(maxH * 0.8, fontSizeBasedOnWidth);
-                        
-                        text.setAttribute("font-size", finalSize + "px");
-                        text.style.fill = "#2d3436"; // Nicht mehr rot, sondern edles Dunkelgrau
-                    } else {
-                        // LEERER RAUM -> Englische Bezeichnung
-                        const typeLabel = (room.id.includes('_N') || room.id.includes('_S')) ? "Workstation" : room.label;
-                        text.textContent = typeLabel;
-                        text.setAttribute("font-size", "12px");
-                        text.style.opacity = "0.5";
-                    }
-                    svg.appendChild(text);
-                });
-            }
-        }
-        
-        async function handleRoomClick(roomId) {
-            // 1. Frische Daten ziehen, um Überschreiben zu verhindern
-            const { data: current } = await supabaseClient.from('bookings')
-                .select('team_name')
-                .eq('room_id', roomId)
-                .maybeSingle();
-        
-            const dbTeam = current ? current.team_name : null;
-            let newTeam = "";
-        
-            if (dbTeam) {
-                const action = confirm(`Room is occupied by "${dbTeam}".\n\nOK: Delete booking\nCancel: Edit name`);
-                if (action) {
-                    newTeam = null;
-                } else {
-                    newTeam = prompt("Edit team name:", dbTeam);
-                    if (newTeam === null) return;
-                }
+function renderMaps() {
+    for (let i = 1; i <= 9; i++) {
+        const svg = document.getElementById(`f${i}`);
+        if (!svg) continue;
+        svg.innerHTML = '';
+
+        const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        img.setAttribute("href", `4.${i-1}_2048.png`);
+        img.setAttribute("width", "2000");
+        img.setAttribute("height", "1200");
+        svg.appendChild(img);
+
+        allRooms.filter(r => r.floor === `f${i}`).forEach(room => {
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("id", room.id);
+            rect.setAttribute("x", room.x);
+            rect.setAttribute("y", room.y);
+            rect.setAttribute("width", room.width);
+            rect.setAttribute("height", room.height);
+            rect.setAttribute("class", "raum-shape" + (room.team ? " besetzt" : ""));
+            rect.onclick = () => handleRoomClick(room.id);
+            svg.appendChild(rect);
+
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", room.x + room.width / 2);
+            text.setAttribute("y", room.y + room.height / 2);
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("dominant-baseline", "central"); // Vertikale Zentrierung
+            text.setAttribute("class", "raum-label");
+
+            if (room.team) {
+                // NUR TEAMNAME ANZEIGEN (Füllt Kasten aus)
+                text.textContent = room.team;
+                
+                // Dynamische Schriftgröße berechnen
+                const padding = 10;
+                const maxW = room.width - padding;
+                const maxH = room.height - padding;
+                
+                // Faktor 0.6 für durchschnittliche Buchstabenbreite
+                const fontSizeBasedOnWidth = maxW / (room.team.length * 0.6);
+                const finalSize = Math.min(maxH * 0.8, fontSizeBasedOnWidth);
+                
+                text.setAttribute("font-size", finalSize + "px");
+                text.style.fill = "#2d3436";
             } else {
-                newTeam = prompt("Enter team name for this area:");
-                if (!newTeam) return;
+                // LEER -> ENGLISCHE INFO
+                const labelText = (room.id.includes('_N') || room.id.includes('_S')) ? "Workstation" : room.label;
+                text.textContent = labelText;
+                text.setAttribute("font-size", "12px");
+                text.style.opacity = "0.4";
+                text.style.fill = "#636e72";
             }
-        
-            // 2. Datenbank-Update
-            const { error } = await supabaseClient.from('bookings').upsert({ 
-                room_id: roomId, 
-                team_name: newTeam 
-            }, { onConflict: 'room_id' });
-        
-            if (error) {
-                alert("Error: Check Supabase RLS policies.");
-            } else {
-                // Wir laden die App neu, falls Realtime mal hakt
-                initApp();
-            }
-        }
+            svg.appendChild(text);
+        });
+    }
+}
 
-    function showFloor(floorId) {
-        document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
-        document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
-        
-        const target = document.getElementById(floorId);
-        if(target) target.classList.add('active');
-        
-        // Button highlighten
-        const btn = Array.from(document.querySelectorAll('.floor-btn')).find(b => b.getAttribute('onclick').includes(floorId));
-        if(btn) btn.classList.add('active');
+async function handleRoomClick(roomId) {
+    // 1. Live-Check gegen Überschreiben
+    const { data: current } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
+    const dbTeam = current ? current.team_name : null;
+
+    let newTeam = "";
+    if (dbTeam) {
+        const action = confirm(`Occupied by: "${dbTeam}"\n\nOK: Delete booking\nCancel: Edit name`);
+        if (action) { newTeam = null; } 
+        else {
+            newTeam = prompt("New team name:", dbTeam);
+            if (newTeam === null) return;
+        }
+    } else {
+        newTeam = prompt("Enter team name for this area:");
+        if (!newTeam) return;
     }
 
-    function searchTeam() {
-        const query = document.getElementById('search').value.toLowerCase();
-        if(!query) return;
+    // 2. Datenbank Update
+    const { error } = await supabaseClient.from('bookings').upsert({ 
+        room_id: roomId, 
+        team_name: newTeam 
+    });
 
-        const found = allRooms.find(r => r.team && r.team.toLowerCase().includes(query));
-
-        if (found) {
-            showFloor(found.floor);
-            setTimeout(() => {
-                const el = document.getElementById(found.id);
-                if(el) {
-                    el.classList.add('highlight');
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    setTimeout(() => el.classList.remove('highlight'), 3000);
-                }
-            }, 200);
-        } else {
-            alert("Team nicht gefunden");
-        }
+    if (error) {
+        alert("Error saving data. Check RLS policies.");
     }
+    // initApp() wird durch Realtime automatisch getriggert!
+}
 
-    // REALTIME SUBSCRIPTION
+function showFloor(floorId) {
+    document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(floorId).classList.add('active');
+    const btn = Array.from(document.querySelectorAll('.floor-btn')).find(b => b.getAttribute('onclick').includes(floorId));
+    if(btn) btn.classList.add('active');
+}
+
+function searchTeam() {
+    const query = document.getElementById('search').value.toLowerCase();
+    if(!query) return;
+
+    const found = allRooms.find(r => r.team && r.team.toLowerCase().includes(query));
+    if (found) {
+        showFloor(found.floor);
+        setTimeout(() => {
+            const el = document.getElementById(found.id);
+            if(el) {
+                el.classList.add('highlight');
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => el.classList.remove('highlight'), 3000);
+            }
+        }, 250);
+    } else {
+        alert("Team not found");
+    }
+}
+
+// REALTIME SUBSCRIPTION
 supabaseClient
     .channel('room-updates')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-        console.log('Change received!', payload);
-        initApp(); // Das hier aktualisiert allRooms und rendert neu
+        console.log('Update received!', payload);
+        initApp(); // Lädt alles neu und rendert die Karten
     })
     .subscribe();
 
-    initApp();
+initApp();
 </script>
 </body>
 </html>
