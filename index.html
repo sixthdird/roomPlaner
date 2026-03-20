@@ -21,9 +21,24 @@
 		.floor-map.active {
 		    display: block;
 		}
-        .raum-shape { fill: #dfe6e9; stroke: #2d3436; stroke-width: 1; cursor: pointer; transition: all 0.2s; }
-        .raum-shape:hover { fill: #b2bec3; }
-        .besetzt { fill: #fab1a0 !important; }
+		/* Bestehende Zeile aktualisieren für bessere Optik & Animation */
+.raum-shape { 
+    fill: rgba(223, 230, 233, 0.5); /* Leicht transparent, damit der Plan durchscheint */
+    stroke: #2d3436; 
+    stroke-width: 1.5; 
+    cursor: pointer; 
+    transition: all 0.3s ease; /* Macht den Farbwechsel beim Einchecken/Löschen geschmeidig */
+}
+
+/* Hover-Effekt bleibt */
+.raum-shape:hover { 
+    fill: rgba(178, 190, 195, 0.8); 
+}
+
+/* Wenn besetzt, eine deutlichere Farbe (z.B. ein sanftes Rot oder Blau) */
+.besetzt { 
+    fill: rgba(250, 177, 160, 0.6) !important; 
+}
         .highlight { stroke: #0984e3; stroke-width: 4; fill: #74b9ff !important; }
         .raum-label { font-size: 15px; pointer-events: none; fill: #2d3436; font-weight: bold; }
         button { padding: 8px 15px; cursor: pointer; background: #0984e3; color: white; border: none; border-radius: 4px; }
@@ -227,20 +242,40 @@ f9.appendChild(imgF9);
     }
 
 async function handleRoomClick(roomId) {
-    const team = prompt("Welches Team soll in diesen Raum?");
-    if (team === null) return; 
+    const room = allRooms.find(r => r.id === roomId);
+    let team = "";
 
-    // WICHTIG: Hier muss supabaseClient stehen (wie oben definiert)
+    if (room.team) {
+        // Falls der Raum besetzt ist, fragen: Löschen oder Ändern?
+        const action = confirm(`Raum ${room.label} ist von "${room.team}" besetzt.\n\nMöchtest du die Belegung LÖSCHEN? (Abbrechen zum ÄNDERN des Namens)`);
+        
+        if (action) {
+            // LÖSCHEN gewollt
+            team = null;
+        } else {
+            // ÄNDERN gewollt
+            team = prompt("Neuer Teamname für diesen Raum:", room.team);
+            if (team === null) return; // User hat im Prompt 'Abbrechen' gedrückt
+        }
+    } else {
+        // Raum war leer -> normal fragen
+        team = prompt("Welches Team soll in diesen Raum?");
+        if (!team) return; 
+    }
+
+    // Ab in die Datenbank
     const { error } = await supabaseClient
         .from('bookings')
-        .upsert({ room_id: roomId, team_name: team || null });
+        .upsert({ 
+            room_id: roomId, 
+            team_name: team // Wenn null, wird der Name in der DB geleert
+        });
 
     if (error) {
-        console.error("Fehler beim Speichern:", error);
-        alert("Fehler: RLS in Supabase deaktiviert?");
+        console.error("Fehler:", error);
+        alert("Fehler beim Speichern. Prüfe die Browser-Konsole (F12).");
     } else {
-        const room = allRooms.find(r => r.id === roomId);
-        room.team = team || null;
+        room.team = team;
         renderMaps();
     }
 }
