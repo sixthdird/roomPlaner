@@ -185,41 +185,40 @@ function renderMaps() {
             }
             */
             if (room.team) {
-                // 1. In Zeilen zerlegen
-                const lines = room.team.split(',').map(s => s.trim());
+                // 1. Trennung NUR noch am Komma
+                const lines = room.team.split(',').map(s => s.trim()).filter(Boolean);
                 const lineCount = lines.length;
-            
-                // 2. Das absolut längste Wort/Zeile finden (der Maßstab)
-                const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b);
-                
-                const padding = 10;
+
+                const padding = 8; // Puffer für die Seiten
                 const availW = room.width - padding;
                 const availH = room.height - padding;
-            
-                // 3. Die Master-Größe berechnen:
-                // Wie groß passt das LÄNGSTE Wort in die Breite?
-                const fontSizeW = availW / (longestLine.length * 0.55);
+
+                // 2. BREITEN-CHECK: 
+                // Wir prüfen für jede Zeile einzeln die Breite.
+                // Faktor 0.6 ist bei Courier Bold (Monospace) der sicherste Wert.
+                const widthLimits = lines.map(line => availW / (line.length * 0.6));
+                const fontSizeW = Math.min(...widthLimits);
                 
-                // Wie groß passen ALLE Zeilen untereinander in die Höhe?
+                // 3. HÖHEN-CHECK:
                 const fontSizeH = (availH / lineCount) * 0.85; 
-            
-                // 4. Den kleineren Wert wählen (damit weder Breite noch Höhe gesprengt wird)
+
+                // 4. FINALE GRÖSSE:
                 let finalSize = Math.min(fontSizeW, fontSizeH);
                 
-                // Deckel drauf (Max 60px, Min 9px)
+                // Deckel (Max 60px, Min 8px)
                 if (finalSize > 60) finalSize = 60;
-                if (finalSize < 9) finalSize = 9;
-            
+                if (finalSize < 8) finalSize = 8;
+
                 text.setAttribute("font-size", finalSize + "px");
-            
-                // 5. Alle Zeilen mit dieser EINEN finalSize rendern
+                text.innerHTML = ''; // Wichtig für Realtime-Updates
+
+                // 5. ZEILEN RENDERN
                 lines.forEach((line, index) => {
                     const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
                     tspan.textContent = line;
                     tspan.setAttribute("x", room.x + room.width / 2);
                     
                     if (index === 0) {
-                        // Block vertikal mittig ausrichten
                         const startOffset = ((lineCount - 1) / 2) * -1.1;
                         tspan.setAttribute("dy", startOffset + "em");
                     } else {
