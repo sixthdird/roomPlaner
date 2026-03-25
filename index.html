@@ -32,11 +32,11 @@
             /* Monospace ist zwingend für die mathematische Berechnung */
             font-family: 'Courier New', Courier, monospace; 
             //font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-weight: 800; 
-            pointer-events: none; 
-            fill: #2d3436; 
-            text-shadow: 0px 0px 2px white;
-            user-select: none;
+            font-weight: 900; 
+            /* Weiße Schrift für maximalen Kontrast auf Rot */
+            fill: #ffffff; 
+            /* Schwarzer Schatten für die Tiefenwirkung */
+            filter: drop-shadow(0px 0px 1.5px rgba(0,0,0,0.9));
         }
         
         button { padding: 8px 15px; margin: 2px; cursor: pointer; background: #E6E6E6; color: black; border: none; border-radius: 4px; transition: background 0.2s; }
@@ -226,6 +226,14 @@ function renderMaps() {
                     }
                     text.appendChild(tspan);
                 });
+            } else {
+                // Leere Räume bleiben dezent
+                const labelText = (room.id.includes('_N') || room.id.includes('_S')) 
+                                  ? (isGerman ? "Arbeitsplatz" : "Workstation") 
+                                  : room.label;
+                text.textContent = labelText;
+                text.setAttribute("font-size", "13px");
+                text.style.opacity = "0.6";
             }
             svg.appendChild(text);
         });
