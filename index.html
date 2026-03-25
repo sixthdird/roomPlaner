@@ -234,6 +234,9 @@ function renderMaps() {
                 text.textContent = labelText;
                 text.setAttribute("font-size", "13px");
                 text.style.opacity = "0.6";
+                text.style.fill = "#2d3436"; // Dunkelgrau für leere Plätze
+                // Schatten für leere Räume entfernen, damit es dezenter wirkt
+                text.style.filter = "none";
             }
             svg.appendChild(text);
         });
