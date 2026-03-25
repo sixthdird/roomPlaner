@@ -185,43 +185,45 @@ function renderMaps() {
             }
             */
             if (room.team) {
+                // 1. In Zeilen zerlegen
                 const lines = room.team.split(',').map(s => s.trim());
                 const lineCount = lines.length;
             
+                // 2. Das absolut längste Wort/Zeile finden (der Maßstab)
+                const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b);
+                
                 const padding = 10;
                 const availW = room.width - padding;
                 const availH = room.height - padding;
             
-                // 1. Finde die theoretisch mögliche Schriftgröße für die Breite jeder Zeile
-                // Wir nehmen die kleinste davon (das "engste Nadelöhr")
-                const widthFontSizeLimits = lines.map(line => availW / (line.length * 0.55));
-                const fontSizeW = Math.min(...widthFontSizeLimits);
-            
-                // 2. Berechne die mögliche Höhe (Gesamthöhe durch Anzahl der Zeilen)
+                // 3. Die Master-Größe berechnen:
+                // Wie groß passt das LÄNGSTE Wort in die Breite?
+                const fontSizeW = availW / (longestLine.length * 0.55);
+                
+                // Wie groß passen ALLE Zeilen untereinander in die Höhe?
                 const fontSizeH = (availH / lineCount) * 0.85; 
             
-                // 3. Kombiniere beides und wende Min/Max-Deckel an
+                // 4. Den kleineren Wert wählen (damit weder Breite noch Höhe gesprengt wird)
                 let finalSize = Math.min(fontSizeW, fontSizeH);
                 
-                const maxFontSize = 60; 
-                const minFontSize = 9;
-                if (finalSize > maxFontSize) finalSize = maxFontSize;
-                if (finalSize < minFontSize) finalSize = minFontSize;
+                // Deckel drauf (Max 60px, Min 9px)
+                if (finalSize > 60) finalSize = 60;
+                if (finalSize < 9) finalSize = 9;
             
                 text.setAttribute("font-size", finalSize + "px");
             
-                // Zeilen rendern
+                // 5. Alle Zeilen mit dieser EINEN finalSize rendern
                 lines.forEach((line, index) => {
                     const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
                     tspan.textContent = line;
                     tspan.setAttribute("x", room.x + room.width / 2);
                     
                     if (index === 0) {
-                        // Vertikale Zentrierung: Schiebt den gesamten Block nach oben/unten
+                        // Block vertikal mittig ausrichten
                         const startOffset = ((lineCount - 1) / 2) * -1.1;
                         tspan.setAttribute("dy", startOffset + "em");
                     } else {
-                        tspan.setAttribute("dy", "1.2em"); // Zeilenabstand
+                        tspan.setAttribute("dy", "1.15em"); 
                     }
                     text.appendChild(tspan);
                 });
