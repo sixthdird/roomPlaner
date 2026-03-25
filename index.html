@@ -185,57 +185,46 @@ function renderMaps() {
             }
             */
             if (room.team) {
-                // Trennung am Komma für Zeilenumbrüche
                 const lines = room.team.split(',').map(s => s.trim());
                 const lineCount = lines.length;
-                
-                // Längste Zeile für Breitenberechnung finden
-                const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b);
-                
+            
                 const padding = 10;
                 const availW = room.width - padding;
                 const availH = room.height - padding;
-
-                // Berechnung: Breite pro Zeichen (0.55 Faktor) & Höhe pro Zeile
-                const fontSizeW = availW / (longestLine.length * 0.55);
-                const fontSizeH = (availH / lineCount) * 0.9; 
-
-                // --- GRÖSSENBEGRENZUNG ---
+            
+                // 1. Finde die theoretisch mögliche Schriftgröße für die Breite jeder Zeile
+                // Wir nehmen die kleinste davon (das "engste Nadelöhr")
+                const widthFontSizeLimits = lines.map(line => availW / (line.length * 0.55));
+                const fontSizeW = Math.min(...widthFontSizeLimits);
+            
+                // 2. Berechne die mögliche Höhe (Gesamthöhe durch Anzahl der Zeilen)
+                const fontSizeH = (availH / lineCount) * 0.85; 
+            
+                // 3. Kombiniere beides und wende Min/Max-Deckel an
                 let finalSize = Math.min(fontSizeW, fontSizeH);
-                const maxFontSize = 60; // Deckel bei 60px
-                const minFontSize = 9;  // Minimum 9px
                 
+                const maxFontSize = 60; 
+                const minFontSize = 9;
                 if (finalSize > maxFontSize) finalSize = maxFontSize;
                 if (finalSize < minFontSize) finalSize = minFontSize;
-
+            
                 text.setAttribute("font-size", finalSize + "px");
-
-                // Zeilen als tspan Elemente einfügen
+            
+                // Zeilen rendern
                 lines.forEach((line, index) => {
                     const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
                     tspan.textContent = line;
                     tspan.setAttribute("x", room.x + room.width / 2);
                     
                     if (index === 0) {
-                        // Den gesamten Block vertikal mittig ausrichten
+                        // Vertikale Zentrierung: Schiebt den gesamten Block nach oben/unten
                         const startOffset = ((lineCount - 1) / 2) * -1.1;
                         tspan.setAttribute("dy", startOffset + "em");
                     } else {
-                        tspan.setAttribute("dy", "1.15em"); // Zeilenabstand
+                        tspan.setAttribute("dy", "1.2em"); // Zeilenabstand
                     }
                     text.appendChild(tspan);
                 });
-            } else {
-                // Leere Räume: Englisch & Größenbegrenzung
-                const labelText = (room.id.includes('_N') || room.id.includes('_S'))  
-                                  ? (isGerman ? "Workstation" : "Workstation") // Du wolltest es ja sowieso Englisch
-                                  : room.label;
-                text.textContent = labelText;
-                
-                // Auch hier: Dynamisch, aber klein bleiben
-                const fs = Math.min(13, room.width / (labelText.length * 0.6));
-                text.setAttribute("font-size", fs + "px");
-                text.style.opacity = "0.6";
             }
             svg.appendChild(text);
         });
