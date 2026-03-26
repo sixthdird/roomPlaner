@@ -313,8 +313,13 @@ const sanitizedTeam = sanitizeInput(newTeam, roomId);
     // --- 1. PASSWORT-SCHUTZ ---
     const protectedRooms = ['f1_Event','P1.1','P1.2','P1.3', 'P1.4','P1.5','P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
     if (protectedRooms.includes(roomId)) {
-        const pw = prompt(isGerman ? "Dieser Raum ist geschützt. Passwort eingeben:" : "Protected room. Enter password:");
-        if (pw !== "DiRD2026") {
+        const pwAttempt = prompt(isGerman ? "Passwort eingeben:" : "Enter password:");
+        
+        // Wir fragen die Datenbank, ob das Passwort stimmt
+        const { data: isValid, error: pwError } = await supabaseClient
+            .rpc('check_room_password', { attempt: pwAttempt });
+
+        if (!isValid || pwError) {
             alert(isGerman ? "Falsches Passwort!" : "Wrong password!");
             return;
         }
