@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Hintergrund -->
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="70%" r="70%">
+      <stop offset="0%" style="stop-color:#cc2200;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#1a0a00;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+    </radialGradient>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ff6600;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#ff6600;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Hintergrundkreis -->
+  <circle cx="32" cy="32" r="32" fill="url(#bgGrad)" />
+
+  <!-- Glüh-Effekt -->
+  <circle cx="32" cy="38" r="22" fill="url(#glowGrad)" />
+
+  <!-- Flammen-Formen -->
+  <path d="M20 44 Q22 30 26 34 Q24 22 30 26 Q28 14 32 18 Q36 14 34 26 Q40 22 38 34 Q42 30 44 44 Z"
+        fill="#ff4400" opacity="0.9"/>
+  <path d="M22 44 Q24 33 27 36 Q26 26 30 29 Q29 20 32 22 Q35 20 34 29 Q38 26 37 36 Q40 33 42 44 Z"
+        fill="#ff7700" opacity="0.85"/>
+  <path d="M24 44 Q26 35 28 38 Q28 30 31 32 Q30 24 32 26 Q34 24 33 32 Q36 30 36 38 Q38 35 40 44 Z"
+        fill="#ffaa00" opacity="0.8"/>
+
+  <!-- DRD Text -->
+  <text
+    x="32"
+    y="50"
+    text-anchor="middle"
+    font-family="Arial Black, sans-serif"
+    font-weight="900"
+    font-size="18"
+    letter-spacing="1"
+    fill="#ffffff"
+    opacity="0.95">DRD</text>
+
+  <!-- Text Glow -->
+  <text
+    x="32"
+    y="50"
+    text-anchor="middle"
+    font-family="Arial Black, sans-serif"
+    font-weight="900"
+    font-size="18"
+    letter-spacing="1"
+    fill="#ff6600"
+    opacity="0.4"
+    filter="blur(2px)">DRD</text>
+</svg>
