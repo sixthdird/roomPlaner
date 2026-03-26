@@ -265,7 +265,8 @@ function renderMaps() {
     /*
 async function handleRoomClick(roomId) {
 
-    const sanitizedTeam = sanitizeInput(newTeam);
+    // In handleRoomClick:
+const sanitizedTeam = sanitizeInput(newTeam, roomId);
     
     const { error } = await supabaseClient.from('bookings').upsert({ 
         room_id: roomId, 
@@ -369,21 +370,17 @@ async function handleRoomClick(roomId) {
     }
 }
 
-function sanitizeInput(input) {
+function sanitizeInput(input, roomId) {
     if (!input) return null;
     
-    // 1. HTML-Tags entfernen (Schadcode-Schutz)
+    // HTML-Schutz
     let clean = input.replace(/<[^>]*>?/gm, '');
-
-    // 2. Schimpfwort-Filter (einfaches Beispiel)
-    const blacklist = ["schimpfwort1", "doofmann", "beispielbadword"]; 
-    blacklist.forEach(word => {
-        const regex = new RegExp(word, "gi");
-        clean = clean.replace(regex, "***");
-    });
-
-    // 3. Länge begrenzen (Datenbank-Schutz)
-    return clean.substring(0, 40); 
+    
+    // Flexible Längenbegrenzung
+    const bigRooms = ['f1_Event', 'f2_Bib', 'f3_Audio']; // IDs deiner großen Räume
+    const maxLength = bigRooms.includes(roomId) ? 250 : 50;
+    
+    return clean.substring(0, maxLength).trim();
 }
     
 function showFloor(floorId) {
