@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>RaumPlaner Cloud</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family:  'Courier New', Courier, monospace;  display: flex; flex-direction: column; align-items: center; background: #f4f7f6; margin: 0; padding-bottom: 50px; }
@@ -26,7 +27,24 @@
         }
         .raum-shape:hover { fill: rgba(126, 168, 123, 0.7); }
         .besetzt { fill: rgba(240, 0, 32, 0.5) !important; }
-        .highlight { stroke: #7EA87B !important; stroke-width: 5 !important; fill: rgba(255, 223, 51, 0.8) !important; }
+        /*.highlight { stroke: #7EA87B !important; stroke-width: 5 !important; fill: rgba(255, 223, 51, 0.8) !important; }*/
+        @keyframes pulse-highlight {
+            0% { filter: brightness(1); stroke-width: 5; }
+            50% { filter: brightness(1.3); stroke-width: 10; stroke: #7EA87B; } /* Dein Grün, nur dicker */
+            100% { filter: brightness(1); stroke-width: 5; }
+        }
+        
+        .pulse {
+            animation: pulse-highlight 1.5s ease-in-out infinite;
+            /* transform-origin: center; // Falls du auch ein leichtes Zoomen willst */
+            paint-order: markers fill stroke;
+        }
+        
+        .highlight { 
+            stroke: #7EA87B !important; 
+            stroke-width: 5 !important; 
+            fill: rgba(255, 223, 51, 0.8) !important; 
+        }
 
         .raum-label { 
             /* Monospace ist zwingend für die mathematische Berechnung */
@@ -301,27 +319,38 @@ async function handleRoomClick(roomId) {
     let newTeam = "";
 
     if (currentDBTeam) {
-        // --- 3. BESSERE USABILITY (Kein OK/Abbrechen Wirrwarr) ---
-        const choice = prompt(
-            isGerman 
-            ? `Raum belegt von: "${currentDBTeam}"\n\nOptionen:\n- Neuer Name (einfach tippen)\n- "LÖSCHEN" (um den Raum freizugeben)\n- Abbrechen (einfach leer lassen oder ESC)`
-            : `Occupied by: "${currentDBTeam}"\n\nOptions:\n- New name (just type)\n- "DELETE" (to clear the room)\n- Cancel (leave empty or ESC)`,
-            currentDBTeam
-        );
+        // --- 3. DEIN WUNSCH-WORDING ---
+        const msg = isGerman 
+            ? `RAUM VERWALTEN: "${currentDBTeam}"\n\n` +
+              `• Anderes Team: Neuen Namen einfach tippen\n` +
+              `• Team ergänzen: Komma setzen & Namen anfügen\n` +
+              `• Platz freigeben: Feld komplett LEERMACHEN`
+            : `MANAGE ROOM: "${currentDBTeam}"\n\n` +
+              `• Other Team: Just type new name\n` +
+              `• Add Team: Use comma & add name\n` +
+              `• Clear Room: DELETE everything in the field`;
 
-        if (choice === null) return; // User hat ESC oder Abbrechen gedrückt -> Nichts tun
+        // Wir geben den aktuellen Namen als Standardwert vor
+        const choice = prompt(msg, currentDBTeam);
+
+        // Abbrechen (ESC oder Abbrechen-Button)
+        if (choice === null) return; 
         
-        const cleanChoice = choice.trim().toUpperCase();
-        if (cleanChoice === "LÖSCHEN" || cleanChoice === "DELETE") {
-            newTeam = null; // Raum leeren
-        } else if (choice.trim() === "") {
-            return; // Leere Eingabe ignorieren
+        const trimmedChoice = choice.trim();
+        
+        if (trimmedChoice === "") {
+            // Feld wurde leer gemacht -> Löschen
+            newTeam = null; 
+        } else if (trimmedChoice === currentDBTeam) {
+            // Nichts geändert -> keine Aktion nötig
+            return; 
         } else {
-            newTeam = choice.trim(); // Name ändern
+            // Name wurde geändert oder ergänzt
+            newTeam = trimmedChoice; 
         }
     } else {
         // Raum war leer
-        newTeam = prompt(isGerman ? "Teamname eingeben:" : "Enter team name:");
+        newTeam = prompt(isGerman ? "Teamnamen eingeben:" : "Enter team name:");
         if (!newTeam) return;
     }
 
@@ -334,10 +363,7 @@ async function handleRoomClick(roomId) {
     if (error) {
         alert("Error: " + error.message);
     } else {
-        // Lokales Update damit die Karte sofort reagiert (bevor Realtime triggert)
-        const localRoom = allRooms.find(r => r.id === roomId);
-        if (localRoom) localRoom.team = newTeam;
-        renderMaps();
+        initApp(); // Karte neu laden
     }
 }
 
@@ -354,6 +380,7 @@ function showFloor(floorId) {
     if(btns[index]) btns[index].classList.add('active');
 }
 
+
 function searchTeam() {
     const query = document.getElementById('search').value.toLowerCase();
     if(!query) return;
@@ -368,20 +395,26 @@ function searchTeam() {
         foundRooms.forEach(room => {
             const el = document.getElementById(room.id);
             if(el) {
-                el.classList.add('highlight');
-                // Highlight für 8 Sekunden halten
-                setTimeout(() => el.classList.remove('highlight'), 8000);
+                // Fügt beides hinzu: Deine Farben + die Animation
+                el.classList.add('highlight', 'pulse');
+                
+                // Entfernt beides nach 8 Sekunden
+                setTimeout(() => {
+                    el.classList.remove('highlight', 'pulse');
+                }, 8000);
             }
         });
-        
+
         // Sanft zum ersten Treffer scrollen
         const firstEl = document.getElementById(foundRooms[0].id);
         if(firstEl) firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
     } else {
         alert(isGerman ? "Team nicht gefunden" : "Team not found");
     }
 }
+
+
+    
 
 // REALTIME
 supabaseClient
