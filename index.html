@@ -235,54 +235,55 @@ function renderMaps() {
 
 
     async function handleRoomClick(roomId) {
-    // 1. Live-Check
-    const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
-    const currentDBTeam = latest ? latest.team_name : null;
-
-    // 2. Eingabe-Logik
-    let newTeam = "";
-    if (currentDBTeam) {
+        // 1. Aktuellen Stand aus DB holen
+        const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
+        const currentDBTeam = latest ? latest.team_name : null;
+    
+        // 2. Eingabe-Logik: Was soll eingetragen werden?
+        let newTeam = "";
         const msg = isGerman 
-            ? `RAUM VERWALTEN: "${currentDBTeam}"\n\n• Anderes Team: Namen tippen\n• Team ergänzen: Komma nutzen\n• Löschen: Feld LEERMACHEN`
-            : `MANAGE ROOM: "${currentDBTeam}"\n\n• Other Team: Type name\n• Add Team: Use comma\n• Clear Room: EMPTY field`;
-
-        const choice = prompt(msg, currentDBTeam);
-        if (choice === null) return; 
+            ? `RAUM VERWALTEN: "${currentDBTeam || 'Frei'}"\n\nName tippen oder Feld LEEREN zum Löschen:` 
+            : `MANAGE ROOM: "${currentDBTeam || 'Empty'}"\n\nType name or EMPTY to delete:`;
+        
+        const choice = prompt(msg, currentDBTeam || "");
+        if (choice === null) return; // Abbrechen gedrückt
         newTeam = choice.trim() === "" ? null : choice.trim();
-    } else {
-        newTeam = prompt(isGerman ? "Teamnamen eingeben:" : "Enter team name:");
-        if (newTeam === null) return;
-        newTeam = newTeam.trim() === "" ? null : newTeam.trim();
+    
+        // 3. Sicherheits-Filter (Frontend)
+        const sanitizedTeam = sanitizeInput(newTeam, roomId);
+    
+        // 4. Speichern-Logik mit Passwort-Prüfung
+        const protectedRooms = ['f1_Event','P1.1','P1.2','P1.3', 'P1.4','P1.5', 'P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
+    
+        if (protectedRooms.includes(roomId)) {
+            const pwAttempt = prompt(isGerman ? "Passwort für geschützten Raum:" : "Password for protected room:");
+            if (pwAttempt === null) return;
+    
+            // Nutze die sichere Datenbank-Funktion
+            const { error } = await supabaseClient.rpc('secure_book_room', { 
+                target_room_id: roomId, 
+                new_team_name: sanitizedTeam, 
+                pw_attempt: pwAttempt 
+            });
+    
+            if (error) {
+                alert(isGerman ? "Falsches Passwort oder Datenbankfehler!" : "Wrong password or database error!");
+            } else {
+                initApp();
+            }
+        } else {
+            // Normaler Raum ohne Passwort
+            const { error } = await supabaseClient.from('bookings').upsert({ 
+                room_id: roomId, 
+                team_name: sanitizedTeam 
+            });
+    
+            if (error) alert("Error: " + error.message);
+            else initApp();
+        }
     }
 
-    // 3. Sicherheits-Filter (jetzt mit roomId)
-    const sanitizedTeam = sanitizeInput(newTeam, roomId);
-
-    // 4. Speichern (mit Passwort-Logik)
-    const protectedRooms = ['f1_Event','P1.1','P1.2','P1.3', 'P1.4','P1.5','P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
-
-    if (protectedRooms.includes(roomId)) {
-        const pwAttempt = prompt(isGerman ? "Passwort eingeben:" : "Enter password:");
-        if (!pwAttempt) return;
-
-        const { error } = await supabaseClient.rpc('secure_book_room', { 
-            target_room_id: roomId, 
-            new_team_name: sanitizedTeam, 
-            pw_attempt: pwAttempt 
-        });
-
-        if (error) alert(isGerman ? "Falsches Passwort oder Fehler!" : "Wrong password or error!");
-        else initApp();
-    } else {
-        const { error } = await supabaseClient.from('bookings').upsert({ 
-            room_id: roomId, 
-            team_name: sanitizedTeam 
-        });
-
-        if (error) alert("Error: " + error.message);
-        else initApp();
-    }
-}
+    
 function sanitizeInput(input, roomId) {
     if (!input) return null;
     
