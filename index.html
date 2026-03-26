@@ -250,6 +250,16 @@ function renderMaps() {
             alert(isGerman ? "Falsches Passwort!" : "Wrong password!");
             return;
         }
+
+        const { error } = await supabaseClient.rpc('secure_book_room', { 
+            target_room_id: roomId, 
+            new_team_name: sanitizedTeam,
+            pw_attempt: pwAttempt 
+        });
+    
+        if (error) alert("Zugriff verweigert: " + error.message);
+        else initApp();
+        return;
     }
 
     // --- 2. LIVE-CHECK ---
