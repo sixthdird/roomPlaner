@@ -244,6 +244,7 @@ function renderMaps() {
     }
 }
 
+    /*
 async function handleRoomClick(roomId) {
     const room = allRooms.find(r => r.id === roomId);
     
@@ -276,6 +277,68 @@ async function handleRoomClick(roomId) {
 
     const { error } = await supabaseClient.from('bookings').upsert({ room_id: roomId, team_name: newTeam });
     if (error) alert("Error: " + error.message);
+}
+*/
+
+    async function handleRoomClick(roomId) {
+    const room = allRooms.find(r => r.id === roomId);
+    
+    // --- 1. PASSWORT-SCHUTZ ---
+    // Hier kannst du IDs eintragen, die gesperrt sein sollen
+    const protectedRooms = ['P1.1','P1.2','P1.3', 'P1.4','P1.5','P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
+    if (protectedRooms.includes(roomId)) {
+        const pw = prompt(isGerman ? "Dieser Raum ist geschützt. Passwort eingeben:" : "Protected room. Enter password:");
+        if (pw !== "DiRD2026") { // Hier dein Passwort setzen. Ich weiß, ist öffentlich ;-)
+            alert(isGerman ? "Falsches Passwort!" : "Wrong password!");
+            return;
+        }
+    }
+
+    // --- 2. LIVE-CHECK ---
+    const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
+    const currentDBTeam = latest ? latest.team_name : null;
+
+    let newTeam = "";
+
+    if (currentDBTeam) {
+        // --- 3. BESSERE USABILITY (Kein OK/Abbrechen Wirrwarr) ---
+        const choice = prompt(
+            isGerman 
+            ? `Raum belegt von: "${currentDBTeam}"\n\nOptionen:\n- Neuer Name (einfach tippen)\n- "LÖSCHEN" (um den Raum freizugeben)\n- Abbrechen (einfach leer lassen oder ESC)`
+            : `Occupied by: "${currentDBTeam}"\n\nOptions:\n- New name (just type)\n- "DELETE" (to clear the room)\n- Cancel (leave empty or ESC)`,
+            currentDBTeam
+        );
+
+        if (choice === null) return; // User hat ESC oder Abbrechen gedrückt -> Nichts tun
+        
+        const cleanChoice = choice.trim().toUpperCase();
+        if (cleanChoice === "LÖSCHEN" || cleanChoice === "DELETE") {
+            newTeam = null; // Raum leeren
+        } else if (choice.trim() === "") {
+            return; // Leere Eingabe ignorieren
+        } else {
+            newTeam = choice.trim(); // Name ändern
+        }
+    } else {
+        // Raum war leer
+        newTeam = prompt(isGerman ? "Teamname eingeben:" : "Enter team name:");
+        if (!newTeam) return;
+    }
+
+    // --- 4. SPEICHERN ---
+    const { error } = await supabaseClient.from('bookings').upsert({ 
+        room_id: roomId, 
+        team_name: newTeam 
+    });
+
+    if (error) {
+        alert("Error: " + error.message);
+    } else {
+        // Lokales Update damit die Karte sofort reagiert (bevor Realtime triggert)
+        const localRoom = allRooms.find(r => r.id === roomId);
+        if (localRoom) localRoom.team = newTeam;
+        renderMaps();
+    }
 }
 
 function showFloor(floorId) {
