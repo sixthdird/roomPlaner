@@ -174,35 +174,6 @@ function renderMaps() {
             text.setAttribute("dominant-baseline", "central");
             text.setAttribute("class", "raum-label");
             
-           /* if (room.team) {
-                const labelText = room.team;
-                text.textContent = labelText;
-            
-                // --- MATHEMATISCHE SKALIERUNG ---
-                const padding = 8; // Kleiner Puffer zum Rand
-                const availableW = room.width - padding;
-                const availableH = room.height - padding;
-                
-                const charCount = labelText.length;
-                const fontSizeWidth = availableW / (charCount * 0.6);
-                const fontSizeHeight = availableH; // Maximale Höhe ist die Box-Höhe
-            
-                // Wir nehmen den kleineren Wert, damit es in beide Richtungen passt
-                let finalSize = Math.min(fontSizeWidth, fontSizeHeight);
-                if (charCount < 4) finalSize = finalSize * 0.9;
-            
-                text.setAttribute("font-size", finalSize + "px");
-                text.style.fill = "#2d3436";
-            } else {
-                // Leere Räume bleiben dezent
-                const labelText = (room.id.includes('_N') || room.id.includes('_S')) 
-                                  ? (isGerman ? "Arbeitsplatz" : "Workstation") 
-                                  : room.label;
-                text.textContent = labelText;
-                text.setAttribute("font-size", "13px");
-                text.style.opacity = "0.6";
-            }
-            */
             if (room.team) {
                 // 1. Trennung NUR noch am Komma
                 const lines = room.team.split(',').map(s => s.trim()).filter(Boolean);
@@ -262,50 +233,6 @@ function renderMaps() {
     }
 }
 
-    /*
-async function handleRoomClick(roomId) {
-
-    // In handleRoomClick:
-const sanitizedTeam = sanitizeInput(newTeam, roomId);
-    
-    const { error } = await supabaseClient.from('bookings').upsert({ 
-        room_id: roomId, 
-        team_name: sanitizedTeam 
-    });
-
-    const room = allRooms.find(r => r.id === roomId);
-    
-    // 1. LIVE-CHECK: Was steht JETZT in der Datenbank?
-    const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
-    const currentDBTeam = latest ? latest.team_name : null;
-
-    let newTeam = "";
-    if (currentDBTeam) {
-        const msg = isGerman ? `Besetzt von: "${currentDBTeam}"\n\nOK: Löschen\nAbbrechen: Ändern` : `Occupied by: "${currentDBTeam}"\n\nOK: Delete\nCancel: Edit`;
-        const action = confirm(msg);
-        if (action) {
-            newTeam = null;
-        } else {
-            newTeam = prompt(isGerman ? "Neuer Name:" : "New name:", currentDBTeam);
-            if (newTeam === null) return;
-        }
-    } else {
-        newTeam = prompt(isGerman ? "Teamname eingeben:" : "Enter team name:");
-        if (!newTeam) return;
-    }
-
-    // 2. Erneuter Check vor dem finalen Schreiben
-    const { data: finalCheck } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
-    if ((finalCheck ? finalCheck.team_name : null) !== currentDBTeam) {
-        alert(isGerman ? "Hoppla! In der Zwischenzeit hat jemand anderes diesen Raum geändert." : "Wait! Someone else changed this room while you were typing.");
-        initApp();
-        return;
-    }
-
-    const { error } = await supabaseClient.from('bookings').upsert({ room_id: roomId, team_name: newTeam });
-    if (error) alert("Error: " + error.message);
-}
-*/
 
     async function handleRoomClick(roomId) {
     const room = allRooms.find(r => r.id === roomId);
