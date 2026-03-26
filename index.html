@@ -235,53 +235,57 @@ function renderMaps() {
 
 
     async function handleRoomClick(roomId) {
-        // 1. Aktuellen Stand aus DB holen
-        const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
-        const currentDBTeam = latest ? latest.team_name : null;
-    
-        // 2. Eingabe-Logik: Was soll eingetragen werden?
-        let newTeam = "";
-        const msg = isGerman 
-            ? `RAUM VERWALTEN: "${currentDBTeam || 'Frei'}"\n\nName tippen oder Feld LEEREN zum Löschen:` 
-            : `MANAGE ROOM: "${currentDBTeam || 'Empty'}"\n\nType name or EMPTY to delete:`;
-        
-        const choice = prompt(msg, currentDBTeam || "");
-        if (choice === null) return; // Abbrechen gedrückt
-        newTeam = choice.trim() === "" ? null : choice.trim();
-    
-        // 3. Sicherheits-Filter (Frontend)
-        const sanitizedTeam = sanitizeInput(newTeam, roomId);
-    
-        // 4. Speichern-Logik mit Passwort-Prüfung
-        const protectedRooms = ['f1_Event','P1.1','P1.2','P1.3', 'P1.4','P1.5', 'P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
-    
-        if (protectedRooms.includes(roomId)) {
-            const pwAttempt = prompt(isGerman ? "Passwort für geschützten Raum:" : "Password for protected room:");
-            if (pwAttempt === null) return;
-    
-            // Nutze die sichere Datenbank-Funktion
-            const { error } = await supabaseClient.rpc('secure_book_room', { 
-                target_room_id: roomId, 
-                new_team_name: sanitizedTeam, 
-                pw_attempt: pwAttempt 
-            });
-    
-            if (error) {
-                alert(isGerman ? "Falsches Passwort oder Datenbankfehler!" : "Wrong password or database error!");
-            } else {
-                initApp();
-            }
-        } else {
-            // Normaler Raum ohne Passwort
-            const { error } = await supabaseClient.from('bookings').upsert({ 
-                room_id: roomId, 
-                team_name: sanitizedTeam 
-            });
-    
-            if (error) alert("Error: " + error.message);
-            else initApp();
+    const protectedRooms = ['f1_Event','P1.1','P1.2','P1.3', 'P1.4','P1.5', 'P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
+    let pwAttempt = null;
+
+    // 1. ZUERST Passwort-Abfrage bei geschützten Räumen
+    if (protectedRooms.includes(roomId)) {
+        pwAttempt = prompt(isGerman ? "Geschützter Raum. Passwort eingeben:" : "Protected room. Enter password:");
+        if (pwAttempt === null) return; // Abbrechen gedrückt
+
+        // Vorab-Check (Optional, aber nutzerfreundlich)
+        const { data: isValid } = await supabaseClient.rpc('check_room_password', { attempt: pwAttempt });
+        if (!isValid) {
+            alert(isGerman ? "Falsches Passwort!" : "Wrong password!");
+            return;
         }
     }
+
+    // 2. ERST DANACH: Aktuellen Stand holen und Namen abfragen
+    const { data: latest } = await supabaseClient.from('bookings').select('team_name').eq('room_id', roomId).maybeSingle();
+    const currentDBTeam = latest ? latest.team_name : null;
+
+    const msg = isGerman 
+        ? `RAUM VERWALTEN: "${currentDBTeam || 'Frei'}"\n\nName tippen oder Feld LEEREN zum Löschen:` 
+        : `MANAGE ROOM: "${currentDBTeam || 'Empty'}"\n\nType name or EMPTY to delete:`;
+    
+    const choice = prompt(msg, currentDBTeam || "");
+    if (choice === null) return; 
+    const newTeam = choice.trim() === "" ? null : choice.trim();
+
+    // 3. Sicherheits-Filter (Frontend)
+    const sanitizedTeam = sanitizeInput(newTeam, roomId);
+
+    // 4. Speichern
+    if (protectedRooms.includes(roomId)) {
+        // Sicherer Schreibvorgang über RPC
+        const { error } = await supabaseClient.rpc('secure_book_room', { 
+            target_room_id: roomId, 
+            new_team_name: sanitizedTeam, 
+            pw_attempt: pwAttempt 
+        });
+        if (error) alert("Fehler beim Speichern: " + error.message);
+        else initApp();
+    } else {
+        // Normaler Schreibvorgang
+        const { error } = await supabaseClient.from('bookings').upsert({ 
+            room_id: roomId, 
+            team_name: sanitizedTeam 
+        });
+        if (error) alert("Error: " + error.message);
+        else initApp();
+    }
+}
 
     
 function sanitizeInput(input, roomId) {
