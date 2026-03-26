@@ -264,6 +264,14 @@ function renderMaps() {
 
     /*
 async function handleRoomClick(roomId) {
+
+    const sanitizedTeam = sanitizeInput(newTeam);
+    
+    const { error } = await supabaseClient.from('bookings').upsert({ 
+        room_id: roomId, 
+        team_name: sanitizedTeam 
+    });
+
     const room = allRooms.find(r => r.id === roomId);
     
     // 1. LIVE-CHECK: Was steht JETZT in der Datenbank?
@@ -302,11 +310,10 @@ async function handleRoomClick(roomId) {
     const room = allRooms.find(r => r.id === roomId);
     
     // --- 1. PASSWORT-SCHUTZ ---
-    // Hier kannst du IDs eintragen, die gesperrt sein sollen
     const protectedRooms = ['f1_Event','P1.1','P1.2','P1.3', 'P1.4','P1.5','P2.1','P2.2', 'P2.3', 'P2.4', 'P3.1', 'P3.2', 'P4.1', 'P4.2', 'P5', 'P6.1','P6.2', 'P7.1','P7.2']; 
     if (protectedRooms.includes(roomId)) {
         const pw = prompt(isGerman ? "Dieser Raum ist geschützt. Passwort eingeben:" : "Protected room. Enter password:");
-        if (pw !== "DiRD2026") { // Hier dein Passwort setzen. Ich weiß, ist öffentlich ;-)
+        if (pw !== "DiRD2026") {
             alert(isGerman ? "Falsches Passwort!" : "Wrong password!");
             return;
         }
@@ -319,7 +326,7 @@ async function handleRoomClick(roomId) {
     let newTeam = "";
 
     if (currentDBTeam) {
-        // --- 3. DEIN WUNSCH-WORDING ---
+        // --- 3. WORDING & LOGIK ---
         const msg = isGerman 
             ? `RAUM VERWALTEN: "${currentDBTeam}"\n\n` +
               `• Anderes Team: Neuen Namen einfach tippen\n` +
@@ -330,34 +337,29 @@ async function handleRoomClick(roomId) {
               `• Add Team: Use comma & add name\n` +
               `• Clear Room: DELETE everything in the field`;
 
-        // Wir geben den aktuellen Namen als Standardwert vor
         const choice = prompt(msg, currentDBTeam);
-
-        // Abbrechen (ESC oder Abbrechen-Button)
         if (choice === null) return; 
         
         const trimmedChoice = choice.trim();
-        
         if (trimmedChoice === "") {
-            // Feld wurde leer gemacht -> Löschen
-            newTeam = null; 
+            newTeam = null; // Feld leer -> Löschen
         } else if (trimmedChoice === currentDBTeam) {
-            // Nichts geändert -> keine Aktion nötig
-            return; 
+            return; // Keine Änderung
         } else {
-            // Name wurde geändert oder ergänzt
-            newTeam = trimmedChoice; 
+            newTeam = trimmedChoice;
         }
     } else {
-        // Raum war leer
         newTeam = prompt(isGerman ? "Teamnamen eingeben:" : "Enter team name:");
         if (!newTeam) return;
     }
 
-    // --- 4. SPEICHERN ---
+    // --- 4. SICHERHEITS-FILTER ANWENDEN ---
+    const sanitizedTeam = sanitizeInput(newTeam);
+
+    // --- 5. SPEICHERN ---
     const { error } = await supabaseClient.from('bookings').upsert({ 
         room_id: roomId, 
-        team_name: newTeam 
+        team_name: sanitizedTeam 
     });
 
     if (error) {
@@ -367,6 +369,23 @@ async function handleRoomClick(roomId) {
     }
 }
 
+function sanitizeInput(input) {
+    if (!input) return null;
+    
+    // 1. HTML-Tags entfernen (Schadcode-Schutz)
+    let clean = input.replace(/<[^>]*>?/gm, '');
+
+    // 2. Schimpfwort-Filter (einfaches Beispiel)
+    const blacklist = ["schimpfwort1", "doofmann", "beispielbadword"]; 
+    blacklist.forEach(word => {
+        const regex = new RegExp(word, "gi");
+        clean = clean.replace(regex, "***");
+    });
+
+    // 3. Länge begrenzen (Datenbank-Schutz)
+    return clean.substring(0, 40); 
+}
+    
 function showFloor(floorId) {
     document.querySelectorAll('.floor-map').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
