@@ -95,7 +95,7 @@
 </div>
 <div id="search-results-wrapper" style="display:none; flex-direction: column; align-items: center; margin-top: 10px; background: #e9ecef; padding: 10px; border-radius: 8px; width: 90%; max-width: 600px;">
     <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-        <span style="font-size: 0.8rem; font-weight: bold; color: #2d3436;">Suchergebnisse:</span>
+        <span id="search-results-title" style="font-size: 0.8rem; font-weight: bold; color: #2d3436;"></span>
         <button onclick="clearSearch()" style="background: #ff7675; color: white; padding: 2px 8px; font-size: 0.7rem;">X</button>
     </div>
     <div id="search-results" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;"></div>
@@ -339,12 +339,16 @@ function showFloor(floorId) {
 }
 
 
+let searchTimer = null; // Variable zum Speichern des Timers
+
 function searchTeam() {
     const query = document.getElementById('search').value.toLowerCase();
     const wrapper = document.getElementById('search-results-wrapper');
     const resultContainer = document.getElementById('search-results');
+    const titleEl = document.getElementById('search-results-title');
     
     resultContainer.innerHTML = ''; 
+    if (searchTimer) clearTimeout(searchTimer); // Alten Timer stoppen, falls neu gesucht wird
 
     if(!query) {
         wrapper.style.display = 'none';
@@ -354,7 +358,8 @@ function searchTeam() {
     const foundRooms = allRooms.filter(r => r.team && r.team.toLowerCase().includes(query));
 
     if (foundRooms.length > 0) {
-        wrapper.style.display = 'flex'; // Zeige die Ergebnis-Box an
+        wrapper.style.display = 'flex';
+        titleEl.innerText = isGerman ? "Suchergebnisse:" : "Search Results:";
         
         const floorsWithHits = [...new Set(foundRooms.map(r => r.floor))].sort((a,b) => {
             return parseInt(a.replace('f','')) - parseInt(b.replace('f',''));
@@ -362,7 +367,16 @@ function searchTeam() {
 
         floorsWithHits.forEach(floorId => {
             const floorNum = floorId.replace('f', '');
-            const floorLabel = (floorNum === "1") ? "EG" : (floorNum === "10" ? "Collab" : `${parseInt(floorNum)-1}. Stock`);
+            let floorLabel = "";
+            
+            // Zweisprachige Labels
+            if (floorNum === "1") {
+                floorLabel = isGerman ? "EG" : "GF";
+            } else if (floorNum === "10") {
+                floorLabel = "Collab";
+            } else {
+                floorLabel = isGerman ? `${parseInt(floorNum)-1}. Stock` : `Floor ${parseInt(floorNum)-1}`;
+            }
             
             const jumpBtn = document.createElement('button');
             jumpBtn.innerText = `📍 ${floorLabel}`;
@@ -390,19 +404,23 @@ function searchTeam() {
             }
         });
 
-        // Automatisch zum ersten Treffer
         showFloor(foundRooms[0].floor);
+
+        // AUTO-HIDE nach 1 Minute (60.000 ms)
+        searchTimer = setTimeout(() => {
+            clearSearch();
+        }, 60000);
+
     } else {
         wrapper.style.display = 'none';
         alert(isGerman ? "Team nicht gefunden" : "Team not found");
     }
 }
 
-// Funktion zum Schließen der Suche
 function clearSearch() {
+    if (searchTimer) clearTimeout(searchTimer);
     document.getElementById('search').value = '';
     document.getElementById('search-results-wrapper').style.display = 'none';
-    // Entfernt alle aktuellen Highlights sofort
     document.querySelectorAll('.raum-shape').forEach(el => el.classList.remove('highlight', 'pulse'));
 }
 
