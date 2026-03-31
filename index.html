@@ -93,6 +93,13 @@
     <input type="text" id="search" placeholder="Search team..." onkeypress="if(event.key==='Enter') searchTeam()">
     <button onclick="searchTeam()" style="background:#636e72">Search</button>
 </div>
+<div id="search-results-wrapper" style="display:none; flex-direction: column; align-items: center; margin-top: 10px; background: #e9ecef; padding: 10px; border-radius: 8px; width: 90%; max-width: 600px;">
+    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <span style="font-size: 0.8rem; font-weight: bold; color: #2d3436;">Suchergebnisse:</span>
+        <button onclick="clearSearch()" style="background: #ff7675; color: white; padding: 2px 8px; font-size: 0.7rem;">X</button>
+    </div>
+    <div id="search-results" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;"></div>
+</div>
 
 <svg id="f1" class="floor-map active" viewBox="0 0 2000 1200"></svg>
 <svg id="f2" class="floor-map" viewBox="0 0 2000 1200"></svg>
@@ -334,34 +341,69 @@ function showFloor(floorId) {
 
 function searchTeam() {
     const query = document.getElementById('search').value.toLowerCase();
-    if(!query) return;
+    const wrapper = document.getElementById('search-results-wrapper');
+    const resultContainer = document.getElementById('search-results');
+    
+    resultContainer.innerHTML = ''; 
 
-    // Finde ALLE Räume
+    if(!query) {
+        wrapper.style.display = 'none';
+        return;
+    }
+
     const foundRooms = allRooms.filter(r => r.team && r.team.toLowerCase().includes(query));
 
     if (foundRooms.length > 0) {
-        // Zum Stockwerk des ersten Treffers springen
-        showFloor(foundRooms[0].floor);
+        wrapper.style.display = 'flex'; // Zeige die Ergebnis-Box an
+        
+        const floorsWithHits = [...new Set(foundRooms.map(r => r.floor))].sort((a,b) => {
+            return parseInt(a.replace('f','')) - parseInt(b.replace('f',''));
+        });
 
+        floorsWithHits.forEach(floorId => {
+            const floorNum = floorId.replace('f', '');
+            const floorLabel = (floorNum === "1") ? "EG" : (floorNum === "10" ? "Collab" : `${parseInt(floorNum)-1}. Stock`);
+            
+            const jumpBtn = document.createElement('button');
+            jumpBtn.innerText = `📍 ${floorLabel}`;
+            jumpBtn.style.background = "#7EA87B";
+            jumpBtn.style.color = "white";
+            jumpBtn.style.fontSize = "0.8rem";
+            
+            jumpBtn.onclick = () => {
+                showFloor(floorId);
+                setTimeout(() => {
+                    const firstRoomOnFloor = foundRooms.find(r => r.floor === floorId);
+                    const el = document.getElementById(firstRoomOnFloor.id);
+                    if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+            };
+            resultContainer.appendChild(jumpBtn);
+        });
+
+        // Highlights setzen
         foundRooms.forEach(room => {
             const el = document.getElementById(room.id);
             if(el) {
-                // Fügt beides hinzu: Deine Farben + die Animation
                 el.classList.add('highlight', 'pulse');
-                
-                // Entfernt beides nach 8 Sekunden
-                setTimeout(() => {
-                    el.classList.remove('highlight', 'pulse');
-                }, 8000);
+                setTimeout(() => el.classList.remove('highlight', 'pulse'), 8000);
             }
         });
 
-        // Sanft zum ersten Treffer scrollen
-        const firstEl = document.getElementById(foundRooms[0].id);
-        if(firstEl) firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Automatisch zum ersten Treffer
+        showFloor(foundRooms[0].floor);
     } else {
+        wrapper.style.display = 'none';
         alert(isGerman ? "Team nicht gefunden" : "Team not found");
     }
+}
+
+// Funktion zum Schließen der Suche
+function clearSearch() {
+    document.getElementById('search').value = '';
+    document.getElementById('search-results-wrapper').style.display = 'none';
+    // Entfernt alle aktuellen Highlights sofort
+    document.querySelectorAll('.raum-shape').forEach(el => el.classList.remove('highlight', 'pulse'));
 }
 
 
